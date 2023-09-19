@@ -1,0 +1,62 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const bcrypt = require('bcrypt');
+
+const app = express();
+
+
+mongoose.connect('mongodb://localhost/instagram_clone', { useNewUrlParser: true, useUnifiedTopology: true });
+const db = mongoose.connection;
+db.on('error', console.error.bind(console, 'خطأ في الاتصال بقاعدة البيانات:'));
+db.once('open', () => {
+    console.log('تم الاتصال بقاعدة البيانات بنجاح.');
+});
+
+const User = mongoose.model('User', {
+    username: String,
+    password: String,
+    email: String,
+});
+
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
+
+
+app.post('/signup', async (req, res) => {
+    const { username, password, email } = req.body;
+
+   
+    if (!username || !password || !email) {
+        return res.status(400).json({ message: 'يجب إرسال اسم المستخدم وكلمة المرور والبريد الإلكتروني.' });
+    }
+
+    try {
+        
+        const existingUser = await User.findOne({ username });
+        if (existingUser) {
+            return res.status(400).json({ message: 'اسم المستخدم موجود بالفعل.' });
+        }
+
+        
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const newUser = new User({ username, password: hashedPassword, email });
+
+    
+        await newUser.save();
+
+        return res.status(201).json({ message: 'تم إنشاء المستخدم بنجاح.' });
+    } catch (error) {
+        console.error('حدث خطأ أثناء عملية التسجيل:', error);
+        return res.status(500).json({ message: 'حدث خطأ أثناء عملية التسجيل.' });
+    }
+});
+
+
+
+
+
+
+
+
